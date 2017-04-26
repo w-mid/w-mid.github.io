@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+	<title>snake.jpg</title>
+	<!-- Set up Web MIDI polyfill -->
+    <script src='https://cwilso.github.com/WebMIDIAPIShim/lib/WebMIDIAPI.js'></script>
+
+	<script>
+var context = null; // the Web Audio "context" object
+var midiAccess = null; // the MIDIAccess object.
+var numRows = 8, // the single oscillator
+	numCols = 8; // the envelope for the single oscillator
+var frame1 = null,
+	frame2 = null,
+	currentFrame = null,
+	backFrame = null;
+var selectMIDIIn = null;
+var selectMIDIOut = null;
+var midiAccess = null;
+var midiIn = null;
+var midiOut = null;
+var launchpadFound = false;
+window.addEventListener('load', function() {
+	theUniverse = document.getElementById("universe");
+	frame1 = new Array(numRows);
+	frame2 = new Array(numRows);
+	for (var i = 0; i < numRows; i++) {
+		frame1[i] = new Array(numCols);
+		frame2[i] = new Array(numCols);
+		for (var j = 0; j < numCols; j++) {
+			frame1[i][j] = (Math.random() < 0.5);
+			frame2[i][j] = false;
+		}
+	}
+	for (var i = 0; i < numRows; i++) {
+		var rowElem = document.createElement("div");
+		rowElem.className = "row";
+		rowElem.row = i;
+		for (var j = 0; j < numCols; j++) {
+			var cellElem = document.createElement("div");
+			cellElem.row = i;
+			cellElem.col = j;
+			cellElem.className = "cell";
+			if (frame1[i][j]) cellElem.classList.add("live");
+			rowElem.appendChild(cellElem);
+		}
+		theUniverse.appendChild(rowElem);
+	}
+	currentFrame = frame1;
+	backFrame = frame2;
+	navigator.requestMIDIAccess({}).then(onMIDIInit, onMIDIReject);
+});
+
+function onMIDIInit(midi) {
+	midiAccess = midi;
+	for (var output of midiAccess.outputs.values()) {
+		midiOut = output;
+		midiOut.send([0xB0, 0x00, 0x00]); // Reset Launchpad
+		midiOut.send([0xB0, 0x00, 0x01]); // Select XY mode
+		drawFullBoardToMIDI();
+	}
+	for (var input of midiAccess.inputs.values()) {
+		midiIn = input;
+	}
+	midiIn.onmidimessage = midiProc;
+}
+
+function onMIDIReject(err) {
+	alert("The MIDI system failed to start.  You're gonna have a bad time.");
+}
+
+function drawFullBoardToMIDI() {
+	//	var t = window.performance.webkitNow();
+	for (var i = 0; i < numRows; i++) {
+		for (var j = 0; j < numCols; j++) {
+			var key = i * 16 + j;
+			if (midiOut) midiOut.send([0x90, key, 0x00]);
+		}
+	}
+	//	console.log( "draw took " + (window.performance.webkitNow() - t) + " ms.");
+}
+
+function midiProc(event) {
+	data = event.data;
+	var cmd = data[0] >> 4;
+	var channel = data[0] & 0xf;
+	var noteNumber = data[1];
+	var velocity = data[2];
+}
+	</script>
+</head>
+<body>
+		<div id="universe">
+
+	</div>
+</body>
+</html>
